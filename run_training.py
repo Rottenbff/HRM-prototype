@@ -267,13 +267,15 @@ if not os.path.exists(dataset_path):
     # Create data directory
     os.makedirs("data", exist_ok=True)
 
-    # Build dataset
-    from dataset.build_sudoku_dataset import build_sudoku_dataset
-    build_sudoku_dataset(
-        output_dir=dataset_path,
-        subsample_size=1000,
-        num_aug=1000
-    )
+    # Build dataset using CLI
+    cmd = [
+        sys.executable, "-m", "dataset.build_sudoku_dataset",
+        "--output-dir", dataset_path,
+        "--subsample-size", "1000",
+        "--num-aug", "1000"
+    ]
+    print(f"Running: {' '.join(cmd)}")
+    subprocess.run(cmd, check=True)
     print("✅ Dataset built")
 else:
     print("✅ Dataset found")
