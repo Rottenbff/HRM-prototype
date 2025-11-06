@@ -22,17 +22,23 @@ from pathlib import Path
 ACCOUNT_ID = os.environ.get("ACCOUNT_ID", "account_1")
 RUN_NAME = os.environ.get("RUN_NAME", "sudoku_rotation")
 
-# Your Dropbox API (pre-configured)
-# Note: For Jupyter notebooks, use local storage (no interactive input)
-# To enable Dropbox: Set DROPBOX_ACCESS_TOKEN env var before running
+# ============================================================================
+# CONFIGURATION - SET YOUR ACCESS TOKEN HERE
+# ============================================================================
+
+# Your Dropbox API App Credentials (these are fine in source code)
 DROPBOX_APP_KEY = "bup4b0722jw3ygh"
 DROPBOX_APP_SECRET = "dkee7wj9z8ednhr"
 DROPBOX_FOLDER = f"/trm_checkpoints/{RUN_NAME}"
 
-# For Jupyter notebooks: Set this to a real access token to enable Dropbox
-# Get token at: https://www.dropbox.com/developers/apps
-DROPBOX_ACCESS_TOKEN_HARDCODE = None  # e.g., "sl.BCxxxxxxxxx" (starts with "sl.")
-                                     # Leave as None to use local storage
+# SET YOUR ACCESS TOKEN HERE (gets it from your input above)
+# Format: "sl.u.AGEs..." (starts with "sl." and is 1000+ chars)
+DROPBOX_ACCESS_TOKEN = "sl.u.AGESeshjva2631VBkz96Mqx8TiSjf5LuxLrLJf8nsdApxSSSUZ_Rc5hUwik_oNJ-qBEr2K8BKE0Bjdhw3Yfi5zVg4U5Twb2aV4bVt6LJe5ilWPhc_NARQX8vCO62az0g5t-7HbdwSxd00nqMwyCtMo7Q7xbcZTXa2XIWtsFMyVLswDa_K1NbVVlw9SYdIqNH7Lg96bVF1T3WrhpDeL67_Lj1C2mLJJgCKyGyqOYpOZCQaLfU5JRiskWAF17CQihDeUahusu4AfUG6pmTq7MHYHTJ9Ip1iF32iUmhBhhzW9ZeJjaq7L2jQ6VCxlooZgoi1LnXeOa3diiC232t312gfVsUztbWE-PgSFL0mbPAV5YSAZDATmG_A_y3y0IuXw3cM1CGFMS11pLmdDh4MKleBXJxu33QyCBmnhtdxFz4gK4xtkzQ5amW6XbvfZOfqa_71a-lwAD6Mv3wMXYGEr9YkmnMZel0y4BCFwHN89bATvitijnrYsWIp_0BR_MYiLLjNL9O2A-bfeS5kTs6EybJXPZvRoQ6jeD-RPtHFoSMZgvtVNjWNKMyGQoAsSIf_sqRU2Qlom_HWibCope_iVtvHjv9FXLDuGQlM8ctNdoCMNqpCqXTfEYTRxLk2yBvn1j93am2XQG690Gs3p5uBnA882-KolyJvOpW9Zz0gnBm8-fdozK5RZtsNnQgjH12U0w9eNf_6mZv_dfuO694_G4UKWQfAuBraUGEB96NbheUhejoNVj6-TL721piHKgXK7VZCxAyiTwNcyay34r0KPDp3k0mbYiBXuxDUL5MEGtLln8GEi1mLvKK-_1QoqSIQWrzjw-nLhQGPXPvPialNbo2IEviBiuVyzkS_YXNNY-vcSgm4IOmN0-FND5IbT65A-pf7CpDLywH65H7jOwWKsNq17mog8RcjFWwnMtbLBxbUMNHivpsjqCpkoERrHbgHCk9zeJ5VK4VBFcMx2iCpuIjX0Mvm7DcKl2Rd_Rf0OvaWHVdeGMoXmhwlHg1vIt7_XO4nNL_0u1bPpFtNDsu5qXFWuG78bwniU4HUbGNZScOXHGAf8M3Zgtw5upEwaekZ7p2ViSgO4Yy0fP_WKbDdbo6l-tyYFsADCHA5ikGQUfPmVif1i7iYShLWivy8jTHV0gtpb48J9gohyx4tdSgEPLaxP1Ad0rUaSQVT57W4HyPyl-1gT1Dtp4twiftafhbzJbJVmSkvTFAl5VsG6OS0NuvzXku_3lyzTBJv33uf1SHb7KndfunIMdq27G_WEtiTHfqs1bvBxN69LDKQpExX2fa5lQE"
+
+# If you want to use environment variable instead of hardcoding:
+# DROPBOX_ACCESS_TOKEN = os.environ.get('DROPBOX_ACCESS_TOKEN', DROPBOX_ACCESS_TOKEN)
+
+# ============================================================================
 
 # Training config
 TRAINING_STEPS = 50000
@@ -108,28 +114,24 @@ class DropboxSync:
 
     def get_or_create_token(self):
         """Get or create Dropbox access token"""
-        # Check hardcoded token first (for Jupyter notebooks)
-        if DROPBOX_ACCESS_TOKEN_HARDCODE:
-            if self._test_token(DROPBOX_ACCESS_TOKEN_HARDCODE):
-                return DROPBOX_ACCESS_TOKEN_HARDCODE
+        # Use the hardcoded access token from config
+        token = DROPBOX_ACCESS_TOKEN
+        if token and self._test_token(token):
+            return token
 
-        # Check cache first
+        # Check cache as fallback
         cache_file = Path(self.token_cache)
         if cache_file.exists():
             try:
                 token = cache_file.read_text().strip()
-                # Verify token works
                 if self._test_token(token):
                     return token
             except:
                 pass
 
-        # Try to get token from environment (for automation)
+        # Check environment variable as fallback
         token = os.environ.get('DROPBOX_ACCESS_TOKEN')
         if token and self._test_token(token):
-            # Save for future use
-            cache_file.parent.mkdir(parents=True, exist_ok=True)
-            cache_file.write_text(token)
             return token
 
         # No valid token found
@@ -250,11 +252,7 @@ if dropbox_ok:
 else:
     print("⚠️  Dropbox not configured, using local storage only")
     print("   Checkpoints will be stored locally only")
-    print("💡 To enable Dropbox sync:")
-    print("   1. Get a token at: https://www.dropbox.com/developers/apps")
-    print("   2. Run: export DROPBOX_ACCESS_TOKEN='your_token'")
-    print("   3. Re-run this script")
-    print()
+print()
 
 # ============================================================================
 # DATASET SETUP
