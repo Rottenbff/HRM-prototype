@@ -71,13 +71,30 @@ for pkg in ["-r", "requirements.txt"]:
     except:
         pass
 
-# Fix adam_atan2 installation
-print("🔧 Fixing adam_atan2 installation...")
-install("--no-cache-dir --no-build-isolation --force-reinstall adam-atan2")
+# Fix adam_atan2 installation - comprehensive approach
+print("🔧 Installing adam_atan2 with full compilation...")
 
-# Also ensure we have the necessary build tools
-install("ninja")  # Helps with compilation
-install("cmake")  # Some packages need this
+# Method 1: Try with specific version and compilation
+try:
+    subprocess.run([sys.executable, "-m", "pip", "uninstall", "adam-atan2", "-y", "-q"],
+                  check=False, capture_output=True)
+    subprocess.run([sys.executable, "-m", "pip", "install", "--no-cache-dir", "--no-build-isolation",
+                   "--force-reinstall", "git+https://github.com/ajolicoeur/adam-atan2.git", "-q"],
+                  check=True, capture_output=True)
+except:
+    # Method 2: Fallback to PyPI with extra flags
+    try:
+        subprocess.run([sys.executable, "-m", "pip", "install", "--upgrade", "pip", "setuptools", "wheel", "-q"])
+        subprocess.run([sys.executable, "-m", "pip", "install", "--no-cache-dir", "--force-reinstall",
+                       "--no-build-isolation", "-v", "adam-atan2"], check=True, capture_output=True)
+    except:
+        pass
+
+# Ensure build tools
+install("ninja")
+install("cmake")
+install("cython")  # Sometimes needed
+install("pybind11")  # Sometimes needed
 
 install("dropbox")
 
@@ -387,11 +404,17 @@ print("─" * 78)
 print()
 
 # Start training
+print("Starting training process...")
 try:
     result = subprocess.run(cmd)
 except KeyboardInterrupt:
     print("\n\n🛑 Training interrupted by user")
     print("Saving final checkpoint...")
+except Exception as e:
+    print(f"\n\n❌ Training failed with error:")
+    print(f"{e}")
+    print("\n💡 If this is the adam_atan2 error, I can create a version that uses regular Adam optimizer")
+    print("   This would allow training to proceed normally")
 
 # ============================================================================
 # SYNC FINAL CHECKPOINT
