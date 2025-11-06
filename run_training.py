@@ -23,9 +23,16 @@ ACCOUNT_ID = os.environ.get("ACCOUNT_ID", "account_1")
 RUN_NAME = os.environ.get("RUN_NAME", "sudoku_rotation")
 
 # Your Dropbox API (pre-configured)
+# Note: For Jupyter notebooks, use local storage (no interactive input)
+# To enable Dropbox: Set DROPBOX_ACCESS_TOKEN env var before running
 DROPBOX_APP_KEY = "bup4b0722jw3ygh"
 DROPBOX_APP_SECRET = "dkee7wj9z8ednhr"
 DROPBOX_FOLDER = f"/trm_checkpoints/{RUN_NAME}"
+
+# For Jupyter notebooks: Set this to a real access token to enable Dropbox
+# Get token at: https://www.dropbox.com/developers/apps
+DROPBOX_ACCESS_TOKEN_HARDCODE = None  # e.g., "sl.BCxxxxxxxxx" (starts with "sl.")
+                                     # Leave as None to use local storage
 
 # Training config
 TRAINING_STEPS = 50000
@@ -101,6 +108,11 @@ class DropboxSync:
 
     def get_or_create_token(self):
         """Get or create Dropbox access token"""
+        # Check hardcoded token first (for Jupyter notebooks)
+        if DROPBOX_ACCESS_TOKEN_HARDCODE:
+            if self._test_token(DROPBOX_ACCESS_TOKEN_HARDCODE):
+                return DROPBOX_ACCESS_TOKEN_HARDCODE
+
         # Check cache first
         cache_file = Path(self.token_cache)
         if cache_file.exists():
