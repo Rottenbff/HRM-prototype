@@ -95,13 +95,91 @@ class DropboxSync:
     """Minimal Dropbox client"""
     def __init__(self):
         self.token_cache = "/tmp/.trm_dropbox_cache"
+        self.app_key = DROPBOX_APP_KEY
+        self.app_secret = DROPBOX_APP_SECRET
+        self.token = None
 
-    def get_token(self):
-        """Get access token from cache"""
+    def get_or_create_token(self):
+        """Get or create Dropbox access token"""
+        # Check cache first
         cache_file = Path(self.token_cache)
         if cache_file.exists():
-            return cache_file.read_text().strip()
+            try:
+                token = cache_file.read_text().strip()
+                # Verify token works
+                if self._test_token(token):
+                    return token
+            except:
+                pass
+
+        # Try to get token from environment (for automation)
+        token = os.environ.get('DROPBOX_ACCESS_TOKEN')
+        if token and self._test_token(token):
+            # Save for future use
+            cache_file.parent.mkdir(parents=True, exist_ok=True)
+            cache_file.write_text(token)
+            return token
+
+        # No valid token found
         return None
+
+    def _test_token(self, token):
+        """Test if a token works"""
+        try:
+            import dropbox
+            dbx = dropbox.Dropbox(token)
+            dbx.users_get_current_account()
+            return True
+        except:
+            return False
+
+    def setup_token_interactive(self):
+        """Interactive token setup"""
+        print()
+        print("╔" + "═" * 76 + "╗")
+        print("║" + " " * 10 + "🔑 DROPBOX TOKEN SETUP REQUIRED" + " " * 37 + "║")
+        print("╚" + "═" * 76 + "╝")
+        print()
+        print("To enable Dropbox sync, you need an access token.")
+        print()
+        print("Option 1: Quick Token (Recommended)")
+        print("1. Go to: https://www.dropbox.com/developers/apps")
+        print("2. Create an app or use existing one")
+        print("3. Generate an access token")
+        print("4. Copy the token")
+        print()
+        token = input("Paste your access token here (or press Enter to skip): ").strip()
+        print()
+
+        if token and self._test_token(token):
+            # Save token
+            cache_file = Path(self.token_cache)
+            cache_file.parent.mkdir(parents=True, exist_ok=True)
+            cache_file.write_text(token)
+            print("✅ Token saved! Dropbox sync enabled")
+            return token
+        else:
+            print("⚠️  Invalid token. Using local storage only")
+            return None
+
+    def get_token(self):
+        """Get access token (try to get/create, fallback to interactive)"""
+        if self.token:
+            return self.token
+
+        token = self.get_or_create_token()
+        if not token:
+            # If we're in a notebook or CI environment, don't prompt
+            if sys.stdin.isatty() and not os.environ.get('CI'):
+                token = self.setup_token_interactive()
+            else:
+                print("💡 To enable Dropbox sync, set environment variable:")
+                print("   export DROPBOX_ACCESS_TOKEN='your_token_here'")
+                print("   or run: python run_training.py")
+                return None
+
+        self.token = token
+        return token
 
     def list_checkpoints(self, folder):
         """List checkpoints in Dropbox folder"""
@@ -149,12 +227,21 @@ class DropboxSync:
             return False
 
 # Initialize Dropbox sync
+print("☁️  Initializing Dropbox sync...")
 dropbox = DropboxSync()
-dropbox_ok = dropbox.get_token() is not None
+token = dropbox.get_token()
+dropbox_ok = token is not None
 
-if not dropbox_ok:
+if dropbox_ok:
+    print("✅ Dropbox configured and ready")
+    print("   Folder: " + DROPBOX_FOLDER)
+else:
     print("⚠️  Dropbox not configured, using local storage only")
-    print("   Checkpoints will NOT sync to cloud")
+    print("   Checkpoints will be stored locally only")
+    print("💡 To enable Dropbox sync:")
+    print("   1. Get a token at: https://www.dropbox.com/developers/apps")
+    print("   2. Run: export DROPBOX_ACCESS_TOKEN='your_token'")
+    print("   3. Re-run this script")
     print()
 
 # ============================================================================
