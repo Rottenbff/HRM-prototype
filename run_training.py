@@ -71,8 +71,14 @@ for pkg in ["-r", "requirements.txt"]:
     except:
         pass
 
-# Additional packages
-install("--no-cache-dir --no-build-isolation adam-atan2")
+# Fix adam_atan2 installation
+print("🔧 Fixing adam_atan2 installation...")
+install("--no-cache-dir --no-build-isolation --force-reinstall adam-atan2")
+
+# Also ensure we have the necessary build tools
+install("ninja")  # Helps with compilation
+install("cmake")  # Some packages need this
+
 install("dropbox")
 
 print("✅ All dependencies installed")
