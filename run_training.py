@@ -350,7 +350,7 @@ cmd = [
     "arch.H_cycles=3",
     "arch.L_cycles=6",
     "ema=True",
-    f"project_name='sudoku_pretrain_multiaccount'",
+    f"+project_name='sudoku_pretrain_multiaccount'",
     f"+run_name='{RUN_NAME}'"
 ]
 
